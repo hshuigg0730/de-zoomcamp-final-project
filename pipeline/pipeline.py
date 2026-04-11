@@ -99,7 +99,7 @@ def convert_csv_to_parquet_silber_postgre_warehouse():
     # Write transformed data into the silber parquet location
     df_euro.write \
         .mode('overwrite') \
-        .parquet('/app/datalake/silber/GDP_table.csv')
+        .parquet('/app/datalake/silber')
 
     # PostgreSQL connection configuration for loading into the warehouse
     url = "jdbc:postgresql://pgdatabase:5432/eu_gdp"
