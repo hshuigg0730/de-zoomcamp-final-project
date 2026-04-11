@@ -1,0 +1,23 @@
+[project]
+name = "de-zoomcamp-final-project"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "pandas>=3.0.2",
+    "plotly>=6.7.0",
+    "psycopg2-binary>=2.9.11",
+    "psycopg[binary,pool]>=3.3.3",
+    "pyarrow>=23.0.1",
+    "pyspark>=4.1.1",
+    "sqlalchemy>=2.0.49",
+    "streamlit>=1.56.0",
+]
+
+[dependency-groups]
+dev = [
+    "jupyter>=1.1.1",
+    "kagglehub[pandas-datasets]>=1.0.0",
+    "pgcli>=4.4.0",
+]
