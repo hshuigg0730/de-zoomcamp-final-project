@@ -9,6 +9,8 @@ This repository builds a reproducible data pipeline that:
 - loads the transformed data into a PostgreSQL warehouse,
 - serves an interactive Streamlit dashboard with GDP trends and country share charts.
 
+Source dataset: https://www.kaggle.com/datasets/samuelcortinhas/gdp-of-european-countries
+
 ## Architecture
 
 - `pipeline/` contains the ETL application and Docker image for ingestion and transformation.
