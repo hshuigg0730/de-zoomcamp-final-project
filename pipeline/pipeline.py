@@ -7,9 +7,13 @@ from pyspark.sql import SparkSession, types
 from pyspark.sql import functions as F
 import requests
 
+# -----------------------------------------------------------------------------
+# Utility functions
+# -----------------------------------------------------------------------------
+
 def get_live_usd_to_eur():
     """
-    Fetches the real-time USD to EUR exchange rate using the Frankfurter API.
+    Fetch the real-time USD to EUR exchange rate using the Frankfurter API.
     Returns a float value of the rate, or a fallback value if the request fails.
     """
     try:
@@ -17,7 +21,7 @@ def get_live_usd_to_eur():
         url = "https://api.frankfurter.app/latest?from=USD&to=EUR"
         response = requests.get(url)
         data = response.json()
-        
+
         # Extract the EUR rate from the response payload
         rate = data['rates']['EUR']
         print(f"Successfully fetched live rate: 1 USD = {rate} EUR")
@@ -28,9 +32,13 @@ def get_live_usd_to_eur():
         return 0.92
 
 
+# -----------------------------------------------------------------------------
+# Bronze ingestion
+# -----------------------------------------------------------------------------
+
 def download_to_datalake_bronze():
-    # https://www.kaggle.com/datasets/samuelcortinhas/gdp-of-european-countries/data
-    # Download latest version
+    """Download the dataset from Kaggle and move files into the bronze datalake."""
+    # Source Kaggle dataset for GDP of European countries
     download_path = kagglehub.dataset_download("samuelcortinhas/gdp-of-european-countries")
     source_path = Path(download_path)
     datalake_path = Path("/app/datalake/bronze")
@@ -39,19 +47,25 @@ def download_to_datalake_bronze():
     for file_path in source_path.iterdir():
         if file_path.is_file():
             destination = datalake_path / file_path.name
-            
             shutil.move(str(file_path), str(destination))
             print(f"Moved: {file_path.name}")
 
-def convert_csv_to_parquet_silber_postgre_warehouse():
-    spark = SparkSession.builder \
-    .master("local[*]") \
-    .appName("Postgres-Write") \
-    .config("spark.jars.packages", "org.postgresql:postgresql:42.5.0") \
-    .getOrCreate()
-    # .config("spark.jars", "/app/postgresql-42.7.2.jar") \
-    
 
+# -----------------------------------------------------------------------------
+# Silber / warehouse transformation
+# -----------------------------------------------------------------------------
+
+def convert_csv_to_parquet_silber_postgre_warehouse():
+    """Read the bronze CSV, convert USD values to EUR, write parquet, and load to Postgres."""
+    spark = SparkSession.builder \
+        .master("local[*]") \
+        .appName("Postgres-Write") \
+        .config("spark.jars.packages", "org.postgresql:postgresql:42.5.0") \
+        .getOrCreate()
+    # Alternative local jar option if package download is not available:
+    # .config("spark.jars", "/app/postgresql-42.7.2.jar") \
+
+    # Define a fixed schema for the input GDP CSV file
     schema = types.StructType([
         types.StructField('year', types.LongType(), True),
         types.StructField('Belgium', types.LongType(), True),
@@ -67,9 +81,10 @@ def convert_csv_to_parquet_silber_postgre_warehouse():
         .schema(schema) \
         .csv('/app/datalake/bronze/GDP_table.csv')
 
-    # 1. Fetch the dynamic exchange rate via API
+    # Fetch the current USD to EUR conversion rate from the API
     current_rate = get_live_usd_to_eur()
-    
+
+    # Convert USD values to EUR for each country column
     df_euro = df \
         .withColumn('Belgium', (F.col('Belgium') * current_rate).cast('long')) \
         .withColumn('France', (F.col('France') * current_rate).cast('long')) \
@@ -78,12 +93,15 @@ def convert_csv_to_parquet_silber_postgre_warehouse():
         .withColumn('Poland', (F.col('Poland') * current_rate).cast('long')) \
         .withColumn('Spain', (F.col('Spain') * current_rate).cast('long'))
 
+    # Repartition before writing to improve parallel output performance
     df_euro = df_euro.repartition(24)
 
+    # Write transformed data into the silber parquet location
     df_euro.write \
         .mode('overwrite') \
         .parquet('/app/datalake/silber/GDP_table.csv')
 
+    # PostgreSQL connection configuration for loading into the warehouse
     url = "jdbc:postgresql://pgdatabase:5432/eu_gdp"
     properties = {
         "user": "root",
@@ -91,18 +109,16 @@ def convert_csv_to_parquet_silber_postgre_warehouse():
         "driver": "org.postgresql.Driver"
     }
 
+    # Write the transformed Spark DataFrame into the Postgres table
     df_euro.write.jdbc(
-        url=url, 
-        table="eu_gdp", 
-        mode="overwrite", 
+        url=url,
+        table="eu_gdp",
+        mode="overwrite",
         properties=properties
     )
+
+
 if __name__ == "__main__":
-    # https://www.kaggle.com/datasets/samuelcortinhas/gdp-of-european-countries/data
+    # Execute the pipeline end-to-end when run as a script
     download_to_datalake_bronze()
-
     convert_csv_to_parquet_silber_postgre_warehouse()
-
-
-# docker run -it --network de-zoomcamp-final-project_default -v $(pwd)/datalake:/app/datalake pyspark:postgre 
-
