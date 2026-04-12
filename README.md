@@ -2,6 +2,11 @@
 
 A final project for Data Engineering Zoomcamp 2026.
 
+## Problem description:
+Source dataset: https://www.kaggle.com/datasets/samuelcortinhas/gdp-of-european-countries
+
+The source dataset provides GDP values for several European countries in a downloadable CSV format. However, the data is reported in US dollars, which is not the standard currency for European economic comparisons, and the dataset lacks built-in comparison and visualization across countries.
+
 This repository builds a reproducible data pipeline that:
 - ingests European GDP CSV data from Kaggle into a bronze data lake,
 - transforms the data with PySpark and converts USD values to EUR,
@@ -10,8 +15,6 @@ This repository builds a reproducible data pipeline that:
 - serves an interactive Streamlit dashboard with GDP trends and country share charts.
 
 ![Streamlit dashboard screenshot](dashboard.png)
-
-Source dataset: https://www.kaggle.com/datasets/samuelcortinhas/gdp-of-european-countries
 
 ## Architecture
 
@@ -126,6 +129,8 @@ The dashboard loads data from PostgreSQL and shows:
 - interactive filters for countries,
 - summary metrics for the selected year.
 
+![Streamlit dashboard screenshot](dashboard.png)
+
 ## Folder structure
 
 - `docker-compose.yaml` — starts the warehouse services.
@@ -149,3 +154,12 @@ To stop and remove Compose services:
 docker compose down
 ```
  
+## Suggested Evaluation Criteria
+
+- Problem description — 4 points: clearly explains the problem and the value the project solves.
+- Cloud — 0 points: cloud infrastructure is not used; the project runs locally.
+- Data ingestion / workflow orchestration — 4 points: end-to-end pipeline with multiple steps and data ingested into the data lake.
+- Data warehouse — 2 points: transformed data is loaded into PostgreSQL warehouse tables.
+- Transformations — 4 points: data transformations are implemented using PySpark.
+- Dashboard — 4 points: interactive dashboard includes at least two visualization tiles.
+- Reproducibility — 4 points: setup instructions are clear, easy to follow, and the code works.
